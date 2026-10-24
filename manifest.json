@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "predmaxim.presence",
+  "name": "Presence",
+  "version": "1.0.0",
+  "author": "predmaxim",
+  "description": "Facts about the user (input, lock, calls, video, earbuds) as a snapshot file for other services",
+  "kinds": [
+    "service"
+  ],
+  "entryPoints": {
+    "service": "Service.qml"
+  }
+}

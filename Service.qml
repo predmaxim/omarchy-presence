@@ -20,7 +20,8 @@ Item {
   IdleMonitor {
     timeout: 5
     respectInhibitors: false
-    onIsIdleChanged: root.idleSince = isIdle ? Math.floor(Date.now() / 1000) - timeout : 0
+    // Going idle keeps a time inherited from the previous shell: no input was seen since.
+    onIsIdleChanged: root.idleSince = isIdle ? (root.idleSince || Math.floor(Date.now() / 1000) - timeout) : 0
   }
   property real idleSince: 0
 
@@ -35,10 +36,43 @@ Item {
       "for d in /dev/video*; do [ -e \"$d\" ] && fuser -s \"$d\" 2>/dev/null && { echo cam; break; }; done; echo '@@'; " +
       "hyprctl clients -j; echo; echo '@@'; " +
       "busctl --user list --no-legend | while read -r n p _; do case $n in org.mpris.MediaPlayer2.*) " +
-      "echo \"$n $p $(busctl --user get-property \"$n\" /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player PlaybackStatus 2>/dev/null)\";; esac; done"]
+      "echo \"$n $p $(busctl --user call --auto-start=no \"$n\" /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties Get ss " +
+      "org.mpris.MediaPlayer2.Player PlaybackStatus 2>/dev/null)\";; esac; done"]
     stdout: StdioCollector { onStreamFinished: root.probe = L.parseProbe(text) }
   }
   Timer { interval: 5000; running: true; repeat: true; triggeredOnStart: true; onTriggered: prober.running = true }
+
+  // The in-ear sensor runs only while the output is on Bluetooth earbuds, for those earbuds.
+  readonly property var sink: Pipewire.defaultAudioSink
+  readonly property bool onBuds: L.onBuds(root.sink ? root.sink.name : "")
+  readonly property string budsAddress: root.onBuds ? String((root.sink.properties || {})["api.bluez5.address"] || "") : ""
+  readonly property string earScript: decodeURIComponent(String(Qt.resolvedUrl("in_ear.py")).replace(/^file:\/\//, ""))
+  property var inEar: null   // true / false from in_ear.py, null — no sensor
+  onBudsAddressChanged: syncEar()
+  Component.onCompleted: syncEar()   // the sink may be known before any change
+  function syncEar() {
+    if (ear.running && ear.address === root.budsAddress) return
+    root.inEar = null
+    earRetry.stop()
+    if (ear.running) ear.running = false   // its onExited starts the next one
+    else if (root.budsAddress !== "") {
+      ear.address = root.budsAddress
+      ear.command = ["/usr/bin/python3", "-I", root.earScript, root.sink.description, root.budsAddress]
+      ear.running = true
+    }
+  }
+  Process {
+    id: ear
+    property string address: ""
+    stdout: SplitParser { onRead: function(line) { root.inEar = L.parseInEar(line) } }
+    // The output moved: start for it. Crashed: again in 30 s. 0: these earbuds have no sensor.
+    onExited: function(code) {
+      root.inEar = null
+      if (ear.address !== root.budsAddress) root.syncEar()
+      else if (code !== 0) earRetry.restart()
+    }
+  }
+  Timer { id: earRetry; interval: 30000; onTriggered: root.syncEar() }
 
   readonly property var facts: ({
     idle_since: root.idleSince,
@@ -47,7 +81,7 @@ Item {
     camera: root.probe.camera,
     // Pausing shows at once; the probe catches up within 5 s.
     video: L.anyPlaying(root.players) && root.probe.video,
-    buds: L.budsState(L.onBuds(Pipewire.defaultAudioSink ? Pipewire.defaultAudioSink.name : ""), null)
+    buds: L.budsState(root.onBuds, root.inEar)
   })
 
   property var written: null
@@ -64,6 +98,8 @@ Item {
     path: Quickshell.env("XDG_RUNTIME_DIR") + "/predmaxim-presence.json"
     atomicWrites: true
     printErrors: false
+    // The previous shell's snapshot, before our first write: a restart while away is no return.
+    onLoaded: if (!root.ready) root.idleSince = L.idleSince(root.idleSince, text(), Math.floor(Date.now() / 1000))
   }
 
   // First write after a probe and the idle timeout: a fresh IdleMonitor reads

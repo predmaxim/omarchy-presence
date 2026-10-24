@@ -40,6 +40,20 @@ function budsState(onBuds, sensor) {
   return sensor ? "in" : "out"
 }
 
+// in_ear.py's lines: "in" / "out"; "unknown" or anything else — no sensor.
+function parseInEar(line) {
+  var l = String(line || "").trim()
+  return l === "in" ? true : l === "out" ? false : null
+}
+
+// Since when there's no input, at a shell start: the previous shell's snapshot, if fresh
+// (< 90 s) and idle, still holds — a restart while the user is away must not read as a return.
+function idleSince(fallback, prevText, now) {
+  var p = null
+  try { p = JSON.parse(prevText) } catch (e) {}
+  return p && now - p.at < 90 && p.idle_since > 0 ? p.idle_since : fallback
+}
+
 // The 5 s probe, sections split by "@@" lines: lock, camera, `hyprctl clients -j`,
 // then "<mpris name> <pid> <PlaybackStatus as busctl prints it>" per player.
 function parseProbe(text) {

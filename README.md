@@ -18,6 +18,15 @@ It writes `$XDG_RUNTIME_DIR/predmaxim-presence.json` atomically on every change 
 | `video` | video plays: a playing MPRIS player whose window inhibits idle (music doesn't inhibit, Orca inhibits but doesn't play) | `hyprctl clients -j`, `busctl --user` (`--auto-start=no`: an activatable player isn't started) |
 | `buds` | `in` (at least one bud in an ear) / `out` (both out) / `unknown` — the output isn't Bluetooth earbuds (`bluez_output.*`) or there's no in-ear sensor | default PipeWire sink, `in_ear.py` |
 
+## Install
+
+```sh
+git clone https://github.com/predmaxim/omarchy-presence ~/Projects/omarchy/own/omarchy-presence
+ln -s ~/Projects/omarchy/own/omarchy-presence ~/.config/omarchy/plugins/predmaxim.presence
+```
+
+Then add `{"id": "predmaxim.presence"}` to `plugins` in `~/.config/omarchy/shell.json` and restart the shell (`omarchy restart shell`). The in-ear sensor needs OpenFreebuds (`yay -S openfreebuds`); without it `buds` is `in`/`out` only by the output, otherwise `unknown`.
+
 ## In-ear sensor
 
 `in_ear.py NAME ADDRESS` runs on the system `/usr/bin/python3` while the output is on the earbuds (name — the node's `node.description`, address — `api.bluez5.address`) and prints `in` / `out` / `unknown`. It reads the sensor through [OpenFreebuds](https://github.com/melianmiko/OpenFreebuds) (AUR `openfreebuds`): FreeBuds Pro 4 runs on its Pro 3 driver, whose in-ear handler stays silent, so the script adds its own for packets `2b 25` (every change) and `2b ac` (on connect): `param_1` — left, `param_2` — right, `1` — in an ear. No OpenFreebuds, a model it doesn't know, or the OpenFreebuds app already running (it holds the earbuds and port 19823) — `unknown` and exit 0, no retry until the output changes; a crash — retry in 30 s. While it runs, it is the OpenFreebuds server itself: the app opened later connects to it as a client. Other earbuds — another script with the same output.

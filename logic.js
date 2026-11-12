@@ -2,7 +2,7 @@
 // predmaxim.presence: everything that needs no QML — the sensors' parsing and the snapshot (node test.js).
 
 // The snapshot's fields in their order; consumers parse by name.
-var FIELDS = ["at", "idle_since", "locked", "mic", "camera", "video", "buds", "screencast"]
+var FIELDS = ["at", "idle_since", "locked", "mic", "video", "buds", "screencast"]
 
 // An app records: virtual capture streams (filter chains hold them all the time),
 // Oma's own ear and the shell's level meters (isMeter(name) — the stock
@@ -66,7 +66,7 @@ function idleSince(fallback, prevText, now) {
   return p && now - p.at < 90 && p.idle_since > 0 ? p.idle_since : fallback
 }
 
-// The 5 s probe, sections split by "@@" lines: lock, camera, `hyprctl clients -j`,
+// The 5 s probe, sections split by "@@" lines: lock, `hyprctl clients -j`,
 // then "<mpris name> <pid> <PlaybackStatus as busctl prints it>" per player.
 function parseProbe(text) {
   var parts = [""]
@@ -74,13 +74,12 @@ function parseProbe(text) {
     if (l === "@@") parts.push("")
     else parts[parts.length - 1] += l + "\n"
   })
-  var players = (parts[3] || "").split("\n").filter(function(l) { return l.trim() !== "" }).map(function(l) {
+  var players = (parts[2] || "").split("\n").filter(function(l) { return l.trim() !== "" }).map(function(l) {
     return { pid: Number(l.trim().split(/\s+/)[1]), playing: l.indexOf('"Playing"') >= 0 }
   })
   return {
     locked: parts[0].indexOf("locked") >= 0,
-    camera: (parts[1] || "").indexOf("cam") >= 0,
-    video: video(parts[2] || "", players)
+    video: video(parts[1] || "", players)
   }
 }
 

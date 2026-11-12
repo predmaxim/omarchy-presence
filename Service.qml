@@ -30,11 +30,10 @@ Item {
   PwObjectTracker { objects: root.nodes }
   readonly property var players: Mpris.players ? Mpris.players.values : []
 
-  property var probe: ({ locked: false, camera: false, video: false })
+  property var probe: ({ locked: false, video: false })
   Process {
     id: prober
     command: ["sh", "-c", "omarchy-hyprland-session-locked && echo locked; echo '@@'; " +
-      "for d in /dev/video*; do [ -e \"$d\" ] && fuser -s \"$d\" 2>/dev/null && { echo cam; break; }; done; echo '@@'; " +
       "hyprctl clients -j; echo; echo '@@'; " +
       "busctl --user list --no-legend | while read -r n p _; do case $n in org.mpris.MediaPlayer2.*) " +
       "echo \"$n $p $(busctl --user call --auto-start=no \"$n\" /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties Get ss " +
@@ -79,7 +78,6 @@ Item {
     idle_since: root.idleSince,
     locked: root.probe.locked,
     mic: L.micBusy(root.nodes, function(name) { return AudioNodes.isShellLevelMeter(name) }),
-    camera: root.probe.camera,
     // Pausing shows at once; the probe catches up within 5 s.
     video: L.anyPlaying(root.players) && root.probe.video,
     buds: L.budsState(root.onBuds, root.inEar),

@@ -50,19 +50,20 @@ assert.strictEqual(L.video(cl, [{ pid: 20, playing: false }]), false)
 assert.strictEqual(L.video(cl, [{ pid: 30, playing: true }]), false)   // playing, but its window doesn't inhibit — music
 assert.strictEqual(L.video("junk", [{ pid: 20, playing: true }]), false)
 
-// The 5 s probe: lock, camera, windows and MPRIS players in one output.
-const probe = "locked\n@@\ncam\n@@\n" + cl + "\n\n@@\n" +
+// The 5 s probe: lock, windows and MPRIS players in one output.
+const probe = "locked\n@@\n" + cl + "\n\n@@\n" +
   'org.mpris.MediaPlayer2.chromium.instance20 20 v s "Playing"\norg.mpris.MediaPlayer2.mpv 30 v s "Paused"\norg.mpris.MediaPlayer2.gone - \n'
-assert.deepStrictEqual(L.parseProbe(probe), { locked: true, camera: true, video: true })
-// Not locked, no camera: empty sections back to back.
-assert.deepStrictEqual(L.parseProbe("@@\n@@\n" + cl + "\n\n@@\n" + 'org.mpris.MediaPlayer2.mpv 20 v s "Paused"\n'), { locked: false, camera: false, video: false })
-assert.deepStrictEqual(L.parseProbe("@@\n@@\n" + cl + "\n\n@@\n" + 'org.mpris.MediaPlayer2.chromium.instance20 20 v s "Playing"\n'), { locked: false, camera: false, video: true })
-assert.deepStrictEqual(L.parseProbe(""), { locked: false, camera: false, video: false })
+assert.deepStrictEqual(L.parseProbe(probe), { locked: true, video: true })
+// Not locked: an empty section first.
+assert.deepStrictEqual(L.parseProbe("@@\n" + cl + "\n\n@@\n" + 'org.mpris.MediaPlayer2.mpv 20 v s "Paused"\n'), { locked: false, video: false })
+assert.deepStrictEqual(L.parseProbe("@@\n" + cl + "\n\n@@\n" + 'org.mpris.MediaPlayer2.chromium.instance20 20 v s "Playing"\n'), { locked: false, video: true })
+assert.deepStrictEqual(L.parseProbe(""), { locked: false, video: false })
 
-assert.strictEqual(L.snapshot({ at: 1, idle_since: 0, locked: false, mic: false, camera: false, video: true, buds: "in", screencast: false }),
-  '{"at":1,"idle_since":0,"locked":false,"mic":false,"camera":false,"video":true,"buds":"in","screencast":false}')
+assert.strictEqual(L.snapshot({ at: 1, idle_since: 0, locked: false, mic: false, video: true, buds: "in", screencast: false }),
+  '{"at":1,"idle_since":0,"locked":false,"mic":false,"video":true,"buds":"in","screencast":false}')
+// No camera field any more: a stray one isn't written.
 assert.strictEqual(L.snapshot({ screencast: true, buds: "out", video: false, camera: true, mic: true, locked: true, idle_since: 5, at: 9 }),
-  '{"at":9,"idle_since":5,"locked":true,"mic":true,"camera":true,"video":false,"buds":"out","screencast":true}')
+  '{"at":9,"idle_since":5,"locked":true,"mic":true,"video":false,"buds":"out","screencast":true}')
 assert.strictEqual(L.changed({ at: 1, screencast: false }, { at: 2, screencast: true }), true)
 assert.strictEqual(L.changed({ at: 1, video: false }, { at: 2, video: false }), false)
 assert.strictEqual(L.changed({ at: 1, video: false }, { at: 2, video: true }), true)

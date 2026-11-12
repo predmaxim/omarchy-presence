@@ -2,7 +2,7 @@
 // predmaxim.presence: everything that needs no QML — the sensors' parsing and the snapshot (node test.js).
 
 // The snapshot's fields in their order; consumers parse by name.
-var FIELDS = ["at", "idle_since", "locked", "mic", "camera", "video", "buds"]
+var FIELDS = ["at", "idle_since", "locked", "mic", "camera", "video", "buds", "screencast"]
 
 // An app records: virtual capture streams (filter chains hold them all the time),
 // Oma's own ear and the shell's level meters (isMeter(name) — the stock
@@ -12,6 +12,17 @@ function micBusy(nodes, isMeter) {
     var n = nodes[i], p = (n && n.properties) || {}
     if (n && n.isStream && n.isSink === false && !(n.audio && n.audio.muted) &&
         String(p["node.virtual"]) !== "true" && p["node.name"] !== "oma-ear" && !isMeter(n.name)) return true
+  }
+  return false
+}
+
+// The screen is shared: a video source with no device behind it — a portal's
+// screencast stream lives as long as the sharing does; a camera has device.id.
+// Documented PipeWire keys, not a portal's node name; virtual cameras count too.
+function sharing(nodes) {
+  for (var i = 0; nodes && i < nodes.length; i++) {
+    var p = (nodes[i] && nodes[i].properties) || {}
+    if (p["media.class"] === "Video/Source" && !p["device.id"]) return true
   }
   return false
 }

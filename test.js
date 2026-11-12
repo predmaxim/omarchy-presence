@@ -3,7 +3,7 @@ const fs = require("fs")
 const path = require("path")
 const assert = require("assert")
 const L = new Function(fs.readFileSync(path.join(__dirname, "logic.js"), "utf8").replace(".pragma library", "") +
-  "; return { micBusy, anyPlaying, video, onBuds, budsState, parseInEar, idleSince, snapshot, changed, parseProbe }")()
+  "; return { micBusy, anyPlaying, video, onBuds, budsState, parseInEar, idleSince, snapshot, changed, parseProbe, sharing }")()
 
 // Microphone: an app records; virtual capture streams, Oma's own ear and the shell's level meters
 // (the stock rule AudioNodes.isShellLevelMeter, passed in by Service.qml) don't count.
@@ -17,6 +17,12 @@ assert.strictEqual(L.micBusy([null, { isStream: true, isSink: true }], none), fa
 assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, name: "quickshell-peak-monitor", properties: { "node.name": "quickshell-peak-monitor" } }], meter), false)
 assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, name: "quickshell", properties: {} }], meter), false)
 assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, name: "telemost", properties: {} }], meter), true)
+
+// Screen sharing: a video source with no device behind it (a portal's screencast stream; a camera has device.id).
+assert.strictEqual(L.sharing([{ properties: { "media.class": "Video/Source", "node.name": "xdph-streaming-1" } }]), true)
+assert.strictEqual(L.sharing([{ properties: { "media.class": "Video/Source", "device.id": "52" } }]), false)
+assert.strictEqual(L.sharing([{ properties: { "media.class": "Stream/Input/Video" } }, null, {}]), false)
+assert.strictEqual(L.sharing(undefined), false)
 
 assert.strictEqual(L.anyPlaying([{ isPlaying: false }, { isPlaying: true }]), true)
 assert.strictEqual(L.anyPlaying([{ isPlaying: false }, null]), false)
@@ -53,10 +59,11 @@ assert.deepStrictEqual(L.parseProbe("@@\n@@\n" + cl + "\n\n@@\n" + 'org.mpris.Me
 assert.deepStrictEqual(L.parseProbe("@@\n@@\n" + cl + "\n\n@@\n" + 'org.mpris.MediaPlayer2.chromium.instance20 20 v s "Playing"\n'), { locked: false, camera: false, video: true })
 assert.deepStrictEqual(L.parseProbe(""), { locked: false, camera: false, video: false })
 
-assert.strictEqual(L.snapshot({ at: 1, idle_since: 0, locked: false, mic: false, camera: false, video: true, buds: "in" }),
-  '{"at":1,"idle_since":0,"locked":false,"mic":false,"camera":false,"video":true,"buds":"in"}')
-assert.strictEqual(L.snapshot({ buds: "out", video: false, camera: true, mic: true, locked: true, idle_since: 5, at: 9 }),
-  '{"at":9,"idle_since":5,"locked":true,"mic":true,"camera":true,"video":false,"buds":"out"}')
+assert.strictEqual(L.snapshot({ at: 1, idle_since: 0, locked: false, mic: false, camera: false, video: true, buds: "in", screencast: false }),
+  '{"at":1,"idle_since":0,"locked":false,"mic":false,"camera":false,"video":true,"buds":"in","screencast":false}')
+assert.strictEqual(L.snapshot({ screencast: true, buds: "out", video: false, camera: true, mic: true, locked: true, idle_since: 5, at: 9 }),
+  '{"at":9,"idle_since":5,"locked":true,"mic":true,"camera":true,"video":false,"buds":"out","screencast":true}')
+assert.strictEqual(L.changed({ at: 1, screencast: false }, { at: 2, screencast: true }), true)
 assert.strictEqual(L.changed({ at: 1, video: false }, { at: 2, video: false }), false)
 assert.strictEqual(L.changed({ at: 1, video: false }, { at: 2, video: true }), true)
 assert.strictEqual(L.changed(null, { at: 2, video: false }), true)

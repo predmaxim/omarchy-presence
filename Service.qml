@@ -82,7 +82,9 @@ Item {
     camera: root.probe.camera,
     // Pausing shows at once; the probe catches up within 5 s.
     video: L.anyPlaying(root.players) && root.probe.video,
-    buds: L.budsState(root.onBuds, root.inEar)
+    buds: L.budsState(root.onBuds, root.inEar),
+    // The tracked nodes: a sharing stream's coming and going is a change, no probe.
+    screencast: L.sharing(root.nodes)
   })
 
   property var written: null

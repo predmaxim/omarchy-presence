@@ -13,7 +13,7 @@ It writes `$XDG_RUNTIME_DIR/predmaxim-presence.json` atomically on every change 
 | `at` | when written, epoch seconds; older than 90 s — the service is gone | clock |
 | `idle_since` | since when there is no input, epoch seconds; `0` — input now; after a shell restart a fresh (< 90 s) idle snapshot's value is kept | `IdleMonitor`, 5 s, ignoring inhibitors |
 | `locked` | the screen is locked | `omarchy-hyprland-session-locked` |
-| `mic` | an app records the microphone (not virtual streams, not Oma's `oma-ear`) | PipeWire nodes |
+| `mic` | an app records the microphone (not virtual streams, not Oma's `oma-ear`, not the shell's own level meters — the stock rule `AudioNodes.isShellLevelMeter`, node `quickshell` or `quickshell-peak-monitor`, as the stock microphone widget; an open audio panel or Oma's orb hearing you is no call) | PipeWire nodes |
 | `camera` | the camera is open | `fuser /dev/video*` |
 | `video` | video plays: a playing MPRIS player whose window inhibits idle (music doesn't inhibit, Orca inhibits but doesn't play) | `hyprctl clients -j`, `busctl --user` (`--auto-start=no`: an activatable player isn't started) |
 | `buds` | `in` (at least one bud in an ear) / `out` (both out) / `unknown` — the output isn't Bluetooth earbuds (`bluez_output.*`) or there's no in-ear sensor | default PipeWire sink, `in_ear.py` |

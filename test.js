@@ -5,12 +5,18 @@ const assert = require("assert")
 const L = new Function(fs.readFileSync(path.join(__dirname, "logic.js"), "utf8").replace(".pragma library", "") +
   "; return { micBusy, anyPlaying, video, onBuds, budsState, parseInEar, idleSince, snapshot, changed, parseProbe }")()
 
-// Microphone: an app records; virtual capture streams and Oma's own ear don't count.
-assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, properties: { "node.name": "oma-ear" } }]), false)
-assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, properties: {} }]), true)
-assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, properties: { "node.virtual": "true" } }]), false)
-assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, audio: { muted: true } }]), false)
-assert.strictEqual(L.micBusy([null, { isStream: true, isSink: true }]), false)
+// Microphone: an app records; virtual capture streams, Oma's own ear and the shell's level meters
+// (the stock rule AudioNodes.isShellLevelMeter, passed in by Service.qml) don't count.
+const meter = name => name === "quickshell" || name === "quickshell-peak-monitor"
+const none = () => false
+assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, properties: { "node.name": "oma-ear" } }], none), false)
+assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, properties: {} }], none), true)
+assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, properties: { "node.virtual": "true" } }], none), false)
+assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, audio: { muted: true } }], none), false)
+assert.strictEqual(L.micBusy([null, { isStream: true, isSink: true }], none), false)
+assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, name: "quickshell-peak-monitor", properties: { "node.name": "quickshell-peak-monitor" } }], meter), false)
+assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, name: "quickshell", properties: {} }], meter), false)
+assert.strictEqual(L.micBusy([{ isStream: true, isSink: false, name: "telemost", properties: {} }], meter), true)
 
 assert.strictEqual(L.anyPlaying([{ isPlaying: false }, { isPlaying: true }]), true)
 assert.strictEqual(L.anyPlaying([{ isPlaying: false }, null]), false)

@@ -4,13 +4,14 @@
 // The snapshot's fields in their order; consumers parse by name.
 var FIELDS = ["at", "idle_since", "locked", "mic", "camera", "video", "buds"]
 
-// An app records: virtual capture streams (filter chains hold them all the time)
-// and Oma's own ear don't count — as micBusy in predmaxim.breaks.
-function micBusy(nodes) {
+// An app records: virtual capture streams (filter chains hold them all the time),
+// Oma's own ear and the shell's level meters (isMeter(name) — the stock
+// AudioNodes.isShellLevelMeter, as the stock microphone widget) don't count.
+function micBusy(nodes, isMeter) {
   for (var i = 0; nodes && i < nodes.length; i++) {
     var n = nodes[i], p = (n && n.properties) || {}
     if (n && n.isStream && n.isSink === false && !(n.audio && n.audio.muted) &&
-        String(p["node.virtual"]) !== "true" && p["node.name"] !== "oma-ear") return true
+        String(p["node.virtual"]) !== "true" && p["node.name"] !== "oma-ear" && !isMeter(n.name)) return true
   }
   return false
 }

@@ -4,6 +4,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Pipewire
 import Quickshell.Services.Mpris
+import qs.Commons
 import "logic.js" as L
 
 // predmaxim.presence: facts about the user for other services (agent-speak,
@@ -77,7 +78,7 @@ Item {
   readonly property var facts: ({
     idle_since: root.idleSince,
     locked: root.probe.locked,
-    mic: L.micBusy(root.nodes),
+    mic: L.micBusy(root.nodes, function(name) { return AudioNodes.isShellLevelMeter(name) }),
     camera: root.probe.camera,
     // Pausing shows at once; the probe catches up within 5 s.
     video: L.anyPlaying(root.players) && root.probe.video,
